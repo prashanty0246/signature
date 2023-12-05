@@ -1,0 +1,234 @@
+src/transfer/update-token/controller/UpdateTokenController.ts
+----------------------------------------------------------------------------------------
+handlerReqUpdateToken(
+    req: IncomingMessage,
+    res: ServerResponse,
+    params: { [key: string]: string | undefined }
+  ) {
+    try {
+    const data = (req as any).data;
+    const msgId = UpdateTokenController.getInstance().getReqMsgId(data);
+    const reqUpdateTokenObj: { ReqUpdateToken: ReqUpdateToken } =
+      UpdateTokenController.getInstance().xmlToJSON.convert(data) as {
+        ReqUpdateToken: ReqUpdateToken;
+      };
+
+    const timestamp = IndianISOTimeStamp();
+    const txnId = params['txnId'] || generateUUID(TSPId);
+
+    const database = new UpdateTokenDatabase({});
+    const updateToken = new UpdateToken(msgId, timestamp, database);
+    //console.log(JSON.stringify(reqUpdateTokenObj.ReqUpdateToken))
+    const reqUpdateTokenAck = updateToken.createReqUpdateTokenAck();
+
+    const reqUpdateTokenAckXml =
+      UpdateTokenController.getInstance().classToXML.convert(
+        reqUpdateTokenAck,
+        xmlNameSpace,
+        xmlXmlns,
+        false
+      );
+
+      UpdateTokenController.getInstance().sendResponse(res, reqUpdateTokenAckXml);
+
+    updateToken
+      .proccessUpdateTokenFromDTSP(reqUpdateTokenObj.ReqUpdateToken, txnId)
+      .then((respUpdateToken: RespUpdateToken) => {
+        const respUpdateTokenXml =
+          UpdateTokenController.getInstance().classToXML.convert(
+            respUpdateToken,
+            xmlNameSpace,
+            'http://npci.org/token/schema/',
+            false
+          );
+
+        if(reqUpdateTokenObj.ReqUpdateToken.ReqDetails.type !== 'REDEEM') {
+          UpdateTokenController.getInstance().request.send(
+            'DTSP',
+            false,
+            'RespUpdateToken/2.0/urn:txnid' + params['txnId'],
+            respUpdateTokenXml,
+            (body: any) => {
+              console.log(body);
+              return;
+            }
+          );
+        }
+      });
+    } catch (error) {
+      console.log({message: "handlerReqUpdateToken :: Error " + error})
+    }
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+src/transfer/update-token/update-token.ts
+---------------------------------------------------------------------------
+getTokenIDs = (reqUpdateToken: any) => {
+    try {
+      const tokenIDs = reqUpdateToken.ReqDetails.Tokens?.Token?.Detail ? reqUpdateToken.ReqDetails.Tokens.Token.Detail
+      .filter((token: any) => token.name === 'tokenId').map((item: any) => item.value) : reqUpdateToken.ReqDetails
+      .Tokens.Token.map((token: any) => {
+          return token.Detail.find((detail: any) => detail.name === 'tokenId').value;
+      });
+      return tokenIDs
+    } catch (error) {
+      return []
+    }
+  }
+
+  async proccessUpdateTokenCheckRedeem(
+    reqUpdateToken: ReqUpdateToken,
+    txnId: string
+  ){
+    try {
+      const requestTokenIDs = this.getTokenIDs(reqUpdateToken)
+      const isForcedRedeem = Array.isArray(reqUpdateToken?.ReqDetails?.Details?.Detail) ? reqUpdateToken?.ReqDetails?.Details?.Detail.find(detail=> detail.name === 'forcedRedeem')?.value : 'false'
+
+      const tokensRaw = isForcedRedeem === 'true' ?
+      await this.updateTokenDatabase.getTokensByWalletAddressAndRecallStatus(
+        tspWalletAddress,
+        TOKEN_RECALL + '_' + txnId
+      ):
+      await this.updateTokenDatabase.getTokensByWalletAddress(
+          tspWalletAddress
+      );
+      
+      this.logger.info(JSON.stringify(tokensRaw));
+
+      let denominations =
+        reqUpdateToken?.ReqDetails?.Amount?.Denominations?.Denomination;
+      this.logger.info(JSON.stringify(denominations));
+      const tokens: UpdateTokenDao[] = [];
+      tokensRaw.forEach((token: any) => {
+        const tokenData = this.classToTransformer.jsonToClass(
+          UpdateTokenDao,
+          token
+        );
+        tokens.push(tokenData);
+      });
+      const tokenGrouped: { [key: number]: string[] } = {};
+      tokens.forEach((token: UpdateTokenDao) => {
+        const value = Number(token.value || '0');
+        if (tokenGrouped[value] == undefined) {
+          tokenGrouped[value] = [];
+        }
+        tokenGrouped[value].push(token.tokenId);
+      });
+      this.logger.info(JSON.stringify(tokenGrouped));
+      const composition: { [key: number]: number } = {};
+
+      if (!Array.isArray(denominations)) {
+        denominations = [JSON.parse(JSON.stringify(denominations))];
+      }
+      denominations?.forEach((denomination: Denomination) => {
+        const value = Number(denomination.value || '0');
+        const count = Number(denomination.count || '0');
+        if (composition[value] == undefined) {
+          composition[value] = 0;
+        }
+        composition[value] += count;
+      });
+      this.logger.info(JSON.stringify(composition));
+
+      const tokenIds: string[] = [];
+      const tokenList: ResToken[] = [];
+      const denominationKeys = Object.keys(composition);
+      denominationKeys.forEach((denomination: string) => {
+        const count = composition[Number(denomination)];
+        if (tokenGrouped[Number(denomination)].length < count) {
+          throw new Error('Not enough tokens avialable');
+        }
+        const tokenData = tokenGrouped[Number(denomination)].slice(0, count);
+        tokenIds.push(...tokenData);
+        tokenData.forEach((id: string) => {
+          tokenList.push(
+            new ResToken(id, Number(denomination).toFixed(2).toString())
+          );
+        });
+      });
+
+      this.logger.info(JSON.stringify(tokenIds));
+      console.log(denominationKeys);
+
+      const type: string = reqUpdateToken?.ReqDetails?.type
+      if(type === 'REDEEM') {
+        await this.updateTokenDatabase.deleteTokens(
+          requestTokenIDs,
+        );
+      }else {
+      await this.updateTokenDatabase.updateTokenStatus(
+        tokenIds,
+        TOKEN_REDEEM + '_' + txnId
+      );
+    }
+      console.log('Token list' + JSON.stringify(tokenList));
+      return this.createRespUpdateToken(
+        reqUpdateToken,
+        tokenList,
+        'SUCCESS',
+        undefined,
+        undefined,
+        type,
+        txnId
+      );
+    } catch (err) {
+      const errCode = '';
+      const errMsg = JSON.stringify(err);
+      this.logger.error(errMsg);
+      return this.createRespUpdateToken(
+        reqUpdateToken,
+        [],
+        'FAILURE',
+        errCode,
+        errMsg
+      );
+    }
+  }
+
+
+
+
+
+
+
+
+
+src/transfer/update-token/interface/update-token.interface.ts
+--------------------------------------------------------------------------
+  deleteTokens(tokenIds: string[]): Promise<any>;
+
+
+
+src/transfer/update-token/database/update-token.database.ts
+----------------------------------------------------------------------
+  deleteTokens(tokenIds: string[]): Promise<any> {
+    const query = 'DELETE FROM ?? WHERE ?? IN (?)';
+    const tokenDummy = UpdateTokenDaoDummy();
+    return this.sqlClient.delete(query, [
+      'tokens',
+      tokenDummy.tokenId,
+      tokenIds
+    ]);
+  }
+
+
+
+
+
+
+
+
+
+
+
+
