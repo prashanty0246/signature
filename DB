@@ -1,0 +1,34 @@
+export const getUserTokensByTokenId = async (tokenIds: any) => {
+	ApplicationLogger({ type: 'Token getUserTokensByTokenId', message: `DB getUserTokensByTokenId :: Get User Tokens By Token IDs`});
+
+	const denominations = await getValidDenominations()
+	const tableNames = denominations.map((deno: any) => `user_token_${deno}`)
+
+	const unionQueries = tableNames.map((tableName: any) => `
+                              SELECT *
+                              FROM ${tableName}
+                              WHERE id IN (${tokenIds})
+                        `).join('UNION');
+
+	const query = `SELECT * FROM (${unionQueries}) AS user_tokens`;
+
+	try {
+		const result = await AppDataSource.getRepository(UserToken).query(query)
+		ApplicationLogger({ type: 'Token', message: `DB getUserTokensByTokenId :: Recived Query Response for Get User Token TokensID from DB`, data: { tokenIds, result } });
+		return result;
+	}
+	catch (error) {
+		ApplicationLogger({
+			type: 'Token', message: `DB getUserTokensByTokenId ::Error in getUserTokensByTokenId due to ${error.message}`,
+			data: { tokenIds }, isError: true, error: error.stack})
+       const { error: err, data } = await new Promise<any>((resolve) => {
+
+	getRecursiveCallForSimpleQuery(query, [], AppDataSource.getRepository(UserToken), resolve, 0, "SELECT");
+		});
+		ApplicationLogger({ type: 'Token', message: `DB getUserTokensByTokenId :: DB Retry Recived Query Response for Get User Token TokensID from DB`, isError: err, data: { tokenIds, result: data } });
+
+		if (!err) return data;
+
+		return null;
+	}
+};
