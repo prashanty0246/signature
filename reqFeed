@@ -4,3 +4,33 @@
 
 
 /ReqFeedToken/2.0/urn:txnid:R-2023-ISS-SBM-f1e66f34-4bfc-495a-8928-be5e85662280
+
+
+
+MariaDB [test]> desc tokens;
++---------------------+--------------+------+-----+---------+-------+
+| Field               | Type         | Null | Key | Default | Extra |
++---------------------+--------------+------+-----+---------+-------+
+| tokenId             | varchar(255) | NO   | PRI | NULL    |       |
+| owneraddress        | varchar(255) | YES  |     | NULL    |       |
+| serialNumber        | varchar(255) | YES  |     | NULL    |       |
+| maximumcount        | int(11)      | YES  |     | NULL    |       |
+| type                | varchar(255) | YES  |     | NULL    |       |
+| claimedtimestamp    | varchar(255) | YES  |     | NULL    |       |
+| usagecount          | varchar(255) | YES  |     | NULL    |       |
+| issuerSign          | varchar(255) | YES  |     | NULL    |       |
+| rulescript          | varchar(255) | YES  |     | NULL    |       |
+| issuerAddress       | varchar(255) | YES  |     | NULL    |       |
+| ownerwalletid       | varchar(255) | YES  |     | NULL    |       |
+| status              | varchar(255) | YES  |     | NULL    |       |
+| creationTimeStamp   | varchar(255) | YES  |     | NULL    |       |
+| expirationtimestamp | varchar(255) | YES  |     | NULL    |       |
+| updatetimestamp     | varchar(255) | YES  |     | NULL    |       |
+| value               | varchar(25)  | YES  |     | NULL    |       |
+| currency            | varchar(255) | YES  |     | NULL    |       |
+| tag                 | varchar(755) | YES  |     | NULL    |       |
+| meta                | varchar(255) | YES  |     | NULL    |       |
+| txnId               | varchar(255) | YES  |     | NULL    |       |
++---------------------+--------------+------+-----+---------+-------+
+20 rows in set (0.004 sec)
+
