@@ -34,4 +34,6 @@ MariaDB [test]> desc tokens;
 +---------------------+--------------+------+-----+---------+-------+
 20 rows in set (0.004 sec)
 
+
+src/transfer/feed-token/feed-token.ts
  await this.feedTokenDatabase.updateTokenStatus(tokens, 'ACTIVE');
