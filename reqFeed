@@ -37,3 +37,17 @@ MariaDB [test]> desc tokens;
 
 src/transfer/feed-token/feed-token.ts
  await this.feedTokenDatabase.updateTokenStatus(tokens, 'ACTIVE');
+
+
+
+
+<ns2:ReqUpdateToken xmlns:ns2=\"http://npci.org/token/schema/\"><Head ver=\"2.0\" ts=\"2023-12-19T11:40:16.264Z\" orgId=\"4578\" msgId=\"d989f01e3e24-4fce-82fd-6d7d387600a3\"/><ReqDetails type=\"CHECKREDEEM\"><Details><Detail name=\"requestId\" value=\"R-2023-REDM-SBM-2b3c13b3-a1c8-4b2e-9f8c-7907f949e855\"/></Details><Amount value=\"800.00\" curr=\"INR\"><Denominations><Denomination value=\"800.00\" count=\"1\"/></Denominations></Amount></ReqDetails></ns2:ReqUpdateToken>
+
+
+/token/api/ReqUpdateToken/2.0/urn:txnid:R-2023-REDM-SBM-2b3c13b3-a1c8-4b2e-9f8c-7907f949e855
+
+
+
+
+
+
