@@ -39,3 +39,19 @@ src/utils/xmlUtils/covertXmlToJsonInput.ts
 
     return tokensArray;
   }
+
+
+
+
+
+ if (isRetailTransfer) {
+    for (const denomDetails of tokenTransferRequest.tokensRequested) {
+        denomDetails.denomination = denomDetails.denomination
+    }
+    tokenTransferRequest.totalAmount = tokenTransferRequest.totalAmount
+  } else {
+    for (const denomDetails of tokenTransferRequest.tokensRequested) {
+        denomDetails.denomination = apiUtil.convertRsToPs(denomDetails.denomination)
+    }
+    tokenTransferRequest.totalAmount = apiUtil.convertRsToPs(tokenTransferRequest.totalAmount)
+  }
