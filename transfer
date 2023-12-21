@@ -1,0 +1,41 @@
+src/utils/xmlUtils/covertXmlToJsonInput.ts
+
+--------------------------------------------------------------------------------------------------
+ export const getTokenDetailsFromRetailTransferReq = (
+    tokensDetail: any,
+  ) => {
+    ApplicationLogger({ type: 'Utils', message: `xmlUtils getTokenDetailsFromRetailTransferReq :: Get token details list along for retail transfer`, data: { tokensDetail } });
+
+    const tokensArray: TokenDetailsRetailTransfer[] = [];
+    if (Array.isArray(tokensDetail)) {
+      tokensDetail.forEach((tokenDetail: any) => {
+        let tokenDetailObj: any = {};
+        const tokenJson = tokenDetail.Detail;
+        tokenJson.forEach((field: any) => {
+          // tokenDetailObj[field.$.name] = field.$.name === "value" 
+          //   ? parseFloat(field.$.value) * 100 // convert rs to paisa
+          //   : field.$.value
+
+          tokenDetailObj[field.$.name] = field.$.name === "value" 
+            ? parseFloat(field.$.value) 
+            : field.$.value
+        });
+        tokensArray.push(tokenDetailObj);
+      });
+    } else {
+      let tokenDetailObj: any = {};
+      const tokenJson = tokensDetail.Detail;
+      tokenJson.forEach((field: any) => {
+        // tokenDetailObj[field.$.name] = field.$.name === "value" 
+        //   ? parseFloat(field.$.value) * 100 // convert rs to paisa
+        //   : field.$.value
+
+        tokenDetailObj[field.$.name] = field.$.name === "value" 
+        ? parseFloat(field.$.value)
+        : field.$.value
+      });
+      tokensArray.push(tokenDetailObj);
+    }
+
+    return tokensArray;
+  }
